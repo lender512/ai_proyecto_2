@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 from sklearn import svm
+import numpy as np
 import pandas as pd
 import os
 
@@ -41,12 +42,46 @@ class handTracker():
 
         if self.results.multi_hand_landmarks:
             # print("HAY MANO")
-            print(svm.predict(cv2.cvtColor(cv2.resize(image, (28, 28), interpolation = cv2.INTER_AREA), cv2.COLOR_BGR2GRAY).flatten().reshape(1, -1)))
-            for handLms in self.results.multi_hand_landmarks:
-                if draw:
-                    self.mpDraw.draw_landmarks(image, handLms, self.mpHands.HAND_CONNECTIONS)
+
         # else:
             # print("NO HAY MANO")
+            for hand_landmark in self.results.multi_hand_landmarks:
+                if draw:
+                    self.mpDraw.draw_landmarks(image, hand_landmark, self.mpHands.HAND_CONNECTIONS)
+                x = [landmark.x for landmark in hand_landmark.landmark]
+                y = [landmark.y for landmark in hand_landmark.landmark]
+                height, width, channels = image.shape
+                center = np.array([np.mean(x)*width, np.mean(y)*height]).astype('int32')
+                # center = center[0], center[1]+30
+                cv2.circle(image, tuple(center), 10, (255,0,0), 1)  #for checking the center 
+
+                a = int(max([int(max(x)*width-min(x)*width), int(max(y)*height-min(y)*height)])/2 + 40)
+                pointA = (center[0]-a,center[1]-a)
+                pointB = (center[0]+a,center[1]+a)
+                cv2.rectangle(image, pointA, pointB, (255,0,0), 1)
+
+                font                   = cv2.FONT_HERSHEY_SIMPLEX
+                bottomLeftCornerOfText = (5,height-5)
+                fontScale              = 1
+                fontColor              = (255,255,255)
+                thickness              = 5
+                lineType               = 2
+
+                
+
+                cropped = image[pointA[0]:pointB[0], pointA[1]:pointB[1]]
+                if cropped.size == 0: continue
+                char = 65 + svm.predict(cv2.cvtColor(cv2.resize(cropped, (28, 28), interpolation = cv2.INTER_AREA), cv2.COLOR_BGR2GRAY).flatten().reshape(1, -1))[0]
+                cv2.putText(image,chr(char), 
+                    bottomLeftCornerOfText, 
+                    font, 
+                    fontScale,
+                    fontColor,
+                    thickness,
+                    lineType)
+
+
+
 
         return image
 
