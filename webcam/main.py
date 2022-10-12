@@ -3,12 +3,37 @@ import mediapipe as mp
 from sklearn import svm
 import numpy as np
 import pandas as pd
+import pywt
 import os
 
 def warn(*args, **kwargs):
     pass
 import warnings
 warnings.warn = warn
+
+def reduce_dimension(letter, cuts, wavelet):
+  for i in range(cuts):
+    (letter, cD) = pywt.dwt(letter, wavelet)
+  return letter
+
+def vectorizar(matrix):
+  return matrix.flatten()
+
+def proccess_letters(dataset, wavelet, cuts = 4):
+  
+  data_X = []
+  data_Y = []
+
+  for letter_features in dataset:
+      
+      letter = letter_features[0]
+      data_Y.append(letter)
+
+      letter_features = reduce_dimension(letter_features[1:], cuts, wavelet)
+      letter_features = vectorizar(letter_features)
+      data_X.append(letter_features)
+
+  return data_X, data_Y
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 print(dir_path)
@@ -20,7 +45,7 @@ df_train = pd.read_csv(dir_path + "\..\data\sign_mnist_train.csv")
 df_train_x = df_train.loc[:, "pixel1":"pixel784"]
 df_train_y = df_train.label
 
-svm = svm.SVC(kernel='linear')
+svm = svm.SVC(kernel='rbf')
 svm.fit(df_train_x,df_train_y)
 svm_predicted = svm.predict(df_test_x)
 
